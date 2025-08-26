@@ -109,7 +109,7 @@ Program received signal SIGSEGV, Segmentation fault.
 pwndbg> i r eip
 eip            0x62616164          0x62616164
 ```
-eip는 `0x62616164`입니다. 해당 값을 추적하여 버퍼 시작점부터 리턴 주소까지의 오프셋을 알아낼 수 있습니다.
+이후 해당 명령어로 eip에 저장된 값을 확인합니다. eip에 저장된 값은 `0x62616164`이며, 해당 값을 추적하여 버퍼 시작점부터 리턴 주소까지의 오프셋을 알아낼 수 있습니다.
 ```yaml
 pwndbg> cyclic -l 0x62616164
 Finding cyclic pattern of 4 bytes: b'daab' (hex: 0x64616162)
