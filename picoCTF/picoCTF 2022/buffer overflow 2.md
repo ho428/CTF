@@ -1,14 +1,7 @@
 # [buffer overflow 2](https://play.picoctf.org/practice/challenge/259?category=6&originalEvent=70&page=1)
 <br />
 
-- [Description](#description)
-- [Exploitation](#exploitation)
-  * [1. 오프셋 구하기](#1-오프셋-구하기)
-  * [2. win()함수 인자의 정확한 오프셋 확인하기](#2-win함수-인자의-정확한-오프셋-확인하기)
-- [FLAG](#flag)
-<br />
-
-# Discription
+**Discription:**
 > Control the return address and arguments
 <br />
 
