@@ -1,15 +1,11 @@
 # [buffer overflow 3](https://play.picoctf.org/practice/challenge/260?category=6&originalEvent=70&page=2&search=)
 <br />
 
-- [Description](#description)
-- [Exploitation](#exploitation)
-  * [1. 오프셋 확인하기](#1-오프셋-확인하기)
-  * [2. 무차별 대입 공격으로 카나리 유출하기](#2-무차별-대입-공격으로-카나리-유출하기)
-  * [3. RET 덮어쓰기]()
-- [FLAG](#flag)
+- [#1. 카나리 찾기](#1-카나리-찾기)
+- [#2. 카나리 찾기](#2-카나리-우회)
 <br />
 
-# Description
+**Description:**
 > Do you think you can bypass the protection and get the flag?
 <br />
 
@@ -114,15 +110,11 @@ vuln: ELF 32-bit LSB executable, Intel i386, version 1 (SYSV), dynamically linke
 ```
 <br />
 
-# Exploitation
+# 1. 카나리 찾기
 문제를 풀기에 앞서 `checksec`으로 바이너리에 적용된 보호기법을 확인해보면, 스택 카나리는 비활성화되어 있습니다. 그러나 소스코드를 살펴보면, **`canary.txt` 에서 4바이트만큼 읽어와 해당 값을 스택 카나리처럼 활용하고 있음을 알 수 있습니다.**
 <br />
 
 카나리는 스택 스매싱 공격으로부터 이를 탐지하고 바이너리를 보호합니다. 구현된 스택 카나리는 버퍼보다 높은 주소에 있음을 알고 있고, `canary.txt`에서 **정적 데이터**를 4바이트 읽어와 사용합니다. 따라서 스택 버퍼오버플로우 취약점을 이용해서 카나리를 **무차별 대입 공격**으로 알아낼 수 있습니다.
-
-<br />
-
-## 1. 오프셋 확인하기
 ```bash
 |------ Low Address ------|
 |        count  0x4       | -> [ebp-0x94] ~ [ebp-0x91]
@@ -146,7 +138,7 @@ vuln: ELF 32-bit LSB executable, Intel i386, version 1 (SYSV), dynamically linke
 
 <br />
 
-## 2. 무차별 대입 공격으로 카나리 유출하기
+# 2. 카나리 우회
 무차별 대입 공격은 값을 대입했을 때, **프로그램의 결과에 따라 참과 거짓을 분별하여 값을 유출하는 공격 방식**입니다. 카나리를 오염시키면 프로그램은 **경고 문자열을 출력**하고, 강제 종료를 합니다.
 ```bash
 $ ./vuln
@@ -187,7 +179,6 @@ $ python3 test2.py
 ```
 <br />
 
-## 3. RET 덮어쓰기
 ```bash
 $ python3 -q
 >>> from pwn import *
