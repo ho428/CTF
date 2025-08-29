@@ -71,7 +71,7 @@ vuln: ELF 32-bit LSB executable, Intel i386, version 1 (SYSV), dynamically linke
 <br />
 
 ## 1. 오프셋 구하기
-문제를 풀이하기 위해서는 gets(buf)에서 발생하는 스택 버퍼오버플로우 취약점으로 `RET` 주소를 `win`으로 덮고 실행해야 합니다. 이때, win의 인자와 문제에서 요구하는 값과 일치해야 FLAG가 출력됩니다. 
+문제를 풀이하기 위해서는 gets(buf)에서 발생하는 스택 버퍼오버플로우 취약점으로 `RET` 주소를 `win`으로 덮고 실행해야 합니다. 이때, win의 인자와 문제에서 요구하는 값과 일치해야 FLAG가 출력됩니다. 공격 코드를 작성하기 전 버퍼~RET까지의 오프셋을 구해야 합니다.
 ```bash
 $ python3 -q
 >>> from pwn import *
