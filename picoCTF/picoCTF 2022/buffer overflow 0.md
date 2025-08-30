@@ -58,7 +58,7 @@ int main(int argc, char **argv){
 ```yaml
 vuln: ELF 32-bit LSB executable, Intel i386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, BuildID[sha1]=a429aa852db1511dec3f0143d93e5b1e80e4d845, for GNU/Linux 3.2.0, not stripped
 
-[*] '/home/kali/pico/buffer_overflow_2/vuln'
+[*] '/home/kali/pico/buf_0/vuln'
     Arch:       i386-32-little
     RELRO:      Partial RELRO
     Stack:      No canary found
