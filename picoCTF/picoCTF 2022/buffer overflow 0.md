@@ -77,6 +77,7 @@ vuln: ELF 32-bit LSB executable, Intel i386, version 1 (SYSV), dynamically linke
 > ```
 
 <br />
+<br />
 
 ```c
 void sigsegv_handler(int sig) {
